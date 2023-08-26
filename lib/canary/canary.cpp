@@ -3,7 +3,7 @@
 #include <WiFi.h>
 #include <SPI.h>
 
-#define LOAD_CONFIG
+//#define LOAD_CONFIG
 
 const int SDchipSelect = 21; // Set the chip select pin for your SD module
 

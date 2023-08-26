@@ -1,18 +1,29 @@
-#include <Arduino.h>
-
-// put function declarations here:
-int myFunction(int, int);
+#include <I2S.h>
 
 void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+  // Open serial communications and wait for port to open:
+  // A baud rate of 115200 is used instead of 9600 for a faster data rate
+  // on non-native USB ports
+  Serial.begin(115200);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+
+  // start I2S at 16 kHz with 16-bits per sample
+  I2S.setAllPins(-1, 42, 41, -1, -1);
+  if (!I2S.begin(PDM_MONO_MODE, 16000, 16)) {
+    Serial.println("Failed to initialize I2S!");
+    while (1); // do nothing
+  }
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-}
+  // read a sample
+  int sample = I2S.read();
 
-// put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
+  if (sample && sample != -1 && sample != 1) {
+    Serial.print(">Audio:");
+    Serial.println(sample);
+  }
+  delay(1); //es cract schüsch ab lol
 }

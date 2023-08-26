@@ -12,12 +12,18 @@ void canary_wifiConnect(void)
 {
     WiFiConfig config;
 
+#ifdef LOAD_CONFIG
     // Get WiFi configuration from SD card
     if (!canary_getWifiConfig(&config))
     {
         Serial.println("Error while getting Wifi configuration");
         // Handle the error condition here
     }
+#else
+    Serial.println("Using hardcoded Credentials");
+    strncpy(config.ssid, "TP-Link_246C", sizeof(config.ssid));
+    strncpy(config.password, "49738766", sizeof(config.password));
+#endif
 
     // Connect to WiFi using retrieved configuration
     Serial.println("Connecting to WiFi...");
@@ -37,6 +43,8 @@ void canary_wifiConnect(void)
 // Function to read WiFi configuration from SD card and populate WiFiConfig struct
 bool canary_getWifiConfig(WiFiConfig *conf)
 {
+    Serial.println("Loading Config from SD");
+
     // Initialize SD card
     if (!SD.begin(SDchipSelect))
     {

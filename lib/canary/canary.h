@@ -1,3 +1,6 @@
+#pragma once
+//#define LOAD_CONFIG
+
 struct WiFiConfig
 {
     char ssid[33];     // Max length of SSID

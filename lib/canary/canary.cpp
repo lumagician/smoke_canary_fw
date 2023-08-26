@@ -85,3 +85,8 @@ bool canary_getWifiConfig(WiFiConfig *conf)
         return false; // Error opening file
     }
 }
+
+bool triggerAlarm ()
+{
+    
+}

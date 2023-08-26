@@ -1,5 +1,6 @@
 #include <I2S.h>
 #include <canary.h>
+#include <HTTPClient.h>
 
 const int chipSelect = 21;                          // Set the chip select pin for your SD module
 const int sampleRate = 16000;                       // Sample rate in Hz
@@ -30,23 +31,53 @@ void setup()
 
 void loop()
 {
-  // uint64_t start = esp_timer_get_time();
-  for (int i = 0; i < numSamples; i++)
-  {
-    samples[i] = I2S.read();                 // Read a sample from I2S and store it in the array
+  // // uint64_t start = esp_timer_get_time();
+  // for (int i = 0; i < numSamples; i++)
+  // {
+  //   samples[i] = I2S.read();                 // Read a sample from I2S and store it in the array
+  // }
+
+  // // uint64_t end = esp_timer_get_time();
+
+  // // printf("took %llu milliseconds\n", (end - start) / 1000);
+
+  // for (int i = 0; i < numSamples; i++)
+  // {
+  //   Serial.print(">Audio:");
+  //   Serial.println(samples[i]);
+  // }
+
+  // delay(1000); // Delay before taking the next sample
+
+
+  String serverName = "https://us-central1-canary-ec729.cloudfunctions.net/sendCanaryAlert";
+
+  HTTPClient http;
+
+  http.begin(serverName.c_str());
+  http.addHeader("Content-Type", "application/json"); 
+
+  String payload = "{\"canaryId\": \"00-00-00-00-00-00\"}";
+
+  // Send the POST request
+  int httpResponseCode = http.POST(payload);
+
+  if (httpResponseCode > 0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+    String response = http.getString();
+    Serial.println(response);
+  } else {
+    Serial.print("Error sending POST request. HTTP Response code: ");
+    Serial.println(httpResponseCode);
   }
 
-  // uint64_t end = esp_timer_get_time();
+  // Close the connection
+  http.end();
 
-  // printf("took %llu milliseconds\n", (end - start) / 1000);
+  Serial.print("Sent");
 
-  for (int i = 0; i < numSamples; i++)
-  {
-    Serial.print(">Audio:");
-    Serial.println(samples[i]);
-  }
 
-  delay(1000); // Delay before taking the next sample
 
   // // Read a sample from I2S
   // int sample = I2S.read();

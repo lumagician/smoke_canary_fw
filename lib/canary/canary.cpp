@@ -3,6 +3,8 @@
 #include <WiFi.h>
 #include <SPI.h>
 
+#define LOAD_CONFIG
+
 const int SDchipSelect = 21; // Set the chip select pin for your SD module
 
 // Function to retrieve WiFi configuration from the SD card
@@ -11,13 +13,18 @@ bool canary_getWifiConfig(WiFiConfig *conf);
 void canary_wifiConnect(void)
 {
     WiFiConfig config;
-
+#ifdef LOAD_CONFIG
     // Get WiFi configuration from SD card
     if (!canary_getWifiConfig(&config))
     {
         Serial.println("Error while getting Wifi configuration");
         // Handle the error condition here
     }
+#else
+    Serial.println("Using hardcoded Credentials");
+    strncpy(config.ssid, "TP-Link_246C", sizeof(config.ssid));
+    strncpy(config.password, "49738766", sizeof(config.password));
+#endif
 
     // Connect to WiFi using retrieved configuration
     Serial.println("Connecting to WiFi...");

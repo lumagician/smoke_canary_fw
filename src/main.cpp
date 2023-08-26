@@ -1,78 +1,87 @@
-#include <SPI.h>
-#include <SD.h>
-#include <EloquentTinyML.h>
-
-#define NUMBER_OF_INPUTS 1
-#define NUMBER_OF_OUTPUTS 1
-#define TENSOR_ARENA_SIZE 2*1024
-
-uint8_t *loadedModel;
-Eloquent::TinyML::TfLite<NUMBER_OF_INPUTS, NUMBER_OF_OUTPUTS, TENSOR_ARENA_SIZE> ml;
-
-
-void loadModel(void);
-
-
 /**
+ * @file streams-i2s_pdm-serial.ino
+ * @author Phil Schatzmann
+ * @brief see https://github.com/pschatzmann/arduino-audio-tools/blob/main/examples/examples-stream/streams-i2s_pdm-serial/README.md
  *
+ * @author Phil Schatzmann
+ * @copyright GPLv3
  */
-void setup() {
+
+#include "AudioTools.h"
+#include "AudioLibs/AudioKit.h"
+#include "AudioLibs/AudioRealFFT.h" // or AudioKissFFT
+
+AudioInfo info(16000, 1, 16);
+I2SStream i2sStream;               // Access I2S as stream
+AudioRealFFT fft;                  // or AudioKissFFT
+StreamCopy copier(fft, i2sStream); // copy i2sStream to csvStream
+
+int channels = 1;
+int samples_per_second = 16000;
+int bits_per_sample = 16;
+float value = 0;
+
+unsigned long timestamp;
+bool smokeFlag = false;
+
+// display fft result
+void fftResult(AudioFFTBase &fft)
+{
+    float diff;
+    auto result = fft.result();
+
+    if ((result.frequency > 2900) && (result.frequency < 3100))
+    {
+        if(smokeFlag == false)
+        {
+            // first time canary died
+            Serial.print(result.frequency);
+            Serial.println(" => canary died!!");
+            timestamp = micros();
+        }else if((micros() - timestamp) > (unsigned long)(1E6 * 60 * 3)){
+            // canary die already
+            Serial.print(result.frequency);
+            Serial.println(" => canary died!!");
+            timestamp = micros();
+        }
+
+        smokeFlag =true;
+    }
+
+    
+
+}
+
+// Arduino Setup
+void setup(void)
+{
     Serial.begin(115200);
-    SPI.begin();
-    delay(3000);
+    AudioLogger::instance().begin(Serial, AudioLogger::Warning);
 
-    if (!SD.begin(21)) {
-        Serial.println("Cannot init SD");
-        delay(60000);
-    }
+    auto cfg = i2sStream.defaultConfig(RX_MODE);
+    cfg.copyFrom(info);
+    cfg.signal_type = PDM;
+    cfg.use_apll = false;
+    cfg.auto_clear = false;
+    cfg.pin_bck = I2S_PIN_NO_CHANGE; // not used
+    cfg.pin_data = 41;
+    cfg.pin_ws = 42;
+    i2sStream.begin(cfg);
 
-    loadModel();
+    // Setup FFT
+    auto tcfg = fft.defaultConfig();
+    tcfg.length = 8192;
+    tcfg.channels = channels;
+    tcfg.sample_rate = samples_per_second;
+    tcfg.bits_per_sample = bits_per_sample;
+    tcfg.callback = &fftResult;
+    fft.begin(tcfg);
 
-    // init Tf from loaded model
-    if (!ml.begin(loadedModel)) {
-        Serial.println("Cannot inialize model");
-        Serial.println(ml.errorMessage());
-        delay(60000);
-    }
+    timestamp = micros();
 }
 
-
-/**
- *
- */
-void loop() {
-    // pick up a random x and predict its sine
-    float x = 3.14 * random(100) / 100;
-    float y = sin(x);
-    float input[1] = { x };
-    float predicted = ml.predict(input);
-
-    Serial.print("sin(");
-    Serial.print(x);
-    Serial.print(") = ");
-    Serial.print(y);
-    Serial.print("\t predicted: ");
-    Serial.println(predicted);
-    delay(1000);
-}
-
-
-/**
- * Load model from SD
- */
-void loadModel() {
-    File file = SD.open("/sine.bin", FILE_READ);
-    size_t modelSize = file.size();
-
-    Serial.print("Found model on filesystem of size ");
-    Serial.println(modelSize);
-
-    // allocate memory
-    loadedModel = (uint8_t*) malloc(modelSize);
-
-    // copy data from file
-    for (size_t i = 0; i < modelSize; i++)
-        loadedModel[i] = file.read();
-
-    file.close();
+// Arduino loop - copy data
+void loop()
+{
+    copier.copy();
 }
